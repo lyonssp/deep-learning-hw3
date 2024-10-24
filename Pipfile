@@ -1,0 +1,16 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+matplotlib = ">=3.5.0"
+pillow = ">=10.0.0"
+tensorboard = ">=2.0.0"
+termcolor = "==2.4.0"
+opencv-python = ">=4.10.0"
+
+[dev-packages]
+
+[requires]
+python_version = "3.12"
