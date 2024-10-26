@@ -6,13 +6,13 @@ import numpy as np
 import torch
 import torch.utils.tensorboard as tb
 
-from .models import ClassificationLoss, load_model, save_model
+from .models import load_model, save_model
 from .utils import load_data
 
 
 def train(
     exp_dir: str = "logs",
-    model_name: str = "linear",
+    model_name: str = "classifier",
     num_epoch: int = 100,
     lr: float = 1e-3,
     batch_size: int = 128,
@@ -42,7 +42,7 @@ def train(
     val_data = load_data("classification_data/val", shuffle=False)
 
     # create loss function and optimizer
-    loss_func = ClassificationLoss()
+    loss_func = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9)
 
     global_step = 0
