@@ -9,10 +9,23 @@ INPUT_STD = [0.2064, 0.1944, 0.2252]
 
 
 class Classifier(nn.Module):
+    class Block(nn.Module):
+        def __init__(self, in_channels, out_channels, stride):
+            super().__init__()
+            kernel_size = 3
+            padding = (kernel_size-1) // 2
+            self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding)
+            self.relu = nn.ReLU()
+
+        def forward(self, x):
+            return self.relu(self.conv(x))
+
     def __init__(
         self,
         in_channels: int = 3,
         num_classes: int = 6,
+        channels_l0: int = 64,
+        n_blocks = 4,
     ):
         """
         A convolutional network for image classification.
@@ -26,8 +39,18 @@ class Classifier(nn.Module):
         self.register_buffer("input_mean", torch.as_tensor(INPUT_MEAN))
         self.register_buffer("input_std", torch.as_tensor(INPUT_STD))
 
-        # TODO: implement
-        pass
+        cnn_layers = [
+            nn.Conv2d(in_channels, channels_l0, kernel_size=3, stride=2, padding=1),
+            nn.ReLU(),
+        ]
+        c1 = channels_l0
+        for _ in range(n_blocks):
+            cnn_layers.append(self.Block(c1, c1, stride=1))
+
+        cnn_layers.append(nn.Conv2d(c1, num_classes, kernel_size=1))
+        cnn_layers.append(nn.AdaptiveAvgPool2d(1))
+
+        self.model = nn.Sequential(*cnn_layers)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -40,10 +63,7 @@ class Classifier(nn.Module):
         # optional: normalizes the input
         z = (x - self.input_mean[None, :, None, None]) / self.input_std[None, :, None, None]
 
-        # TODO: replace with actual forward pass
-        logits = torch.randn(x.size(0), 6)
-
-        return logits
+        return self.model(z).flatten(1)
 
     def predict(self, x: torch.Tensor) -> torch.Tensor:
         """
