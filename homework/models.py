@@ -79,6 +79,20 @@ class Classifier(nn.Module):
         """
         return self(x).argmax(dim=1)
 
+class ClassificationLoss(nn.Module):
+    def forward(self, logits: torch.Tensor, target: torch.LongTensor) -> torch.Tensor:
+        """
+        Multi-class classification loss
+        Hint: simple one-liner
+
+        Args:
+            logits: tensor (b, c) logits, where c is the number of classes
+            target: tensor (b,) labels
+
+        Returns:
+            tensor, scalar loss
+        """
+        return torch.nn.CrossEntropyLoss().forward(logits, target)
 
 class Detector(torch.nn.Module):
     def __init__(
