@@ -14,11 +14,17 @@ class Classifier(nn.Module):
             super().__init__()
             kernel_size = 3
             padding = (kernel_size-1) // 2
-            self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding)
+            self.convs = [
+                nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding),
+                nn.Conv2d(out_channels, out_channels, kernel_size=kernel_size, stride=1, padding=padding),
+                nn.Conv2d(out_channels, out_channels, kernel_size=kernel_size, stride=1, padding=padding)
+            ]
             self.relu = nn.ReLU()
 
         def forward(self, x):
-            return self.relu(self.conv(x))
+            for conv in self.convs:
+                x = conv(x)
+            return self.relu(x)
 
     def __init__(
         self,
@@ -78,21 +84,6 @@ class Classifier(nn.Module):
             pred (torch.LongTensor): class labels {0, 1, ..., 5} with shape (b, h, w)
         """
         return self(x).argmax(dim=1)
-
-class ClassificationLoss(nn.Module):
-    def forward(self, logits: torch.Tensor, target: torch.LongTensor) -> torch.Tensor:
-        """
-        Multi-class classification loss
-        Hint: simple one-liner
-
-        Args:
-            logits: tensor (b, c) logits, where c is the number of classes
-            target: tensor (b,) labels
-
-        Returns:
-            tensor, scalar loss
-        """
-        return torch.nn.CrossEntropyLoss().forward(logits, target)
 
 class Detector(torch.nn.Module):
     def __init__(
