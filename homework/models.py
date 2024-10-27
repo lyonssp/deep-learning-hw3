@@ -17,7 +17,6 @@ class Classifier(nn.Module):
             self.convs = [
                 nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding),
                 nn.Conv2d(out_channels, out_channels, kernel_size=kernel_size, stride=1, padding=padding),
-                nn.Conv2d(out_channels, out_channels, kernel_size=kernel_size, stride=1, padding=padding)
             ]
             self.relu = nn.ReLU()
 
@@ -31,7 +30,7 @@ class Classifier(nn.Module):
         in_channels: int = 3,
         num_classes: int = 6,
         channels_l0: int = 64,
-        n_blocks = 4,
+        n_blocks = 3,
     ):
         """
         A convolutional network for image classification.
@@ -51,7 +50,9 @@ class Classifier(nn.Module):
         ]
         c1 = channels_l0
         for _ in range(n_blocks):
-            cnn_layers.append(self.Block(c1, c1, stride=1))
+            c2 = c1 * 2
+            cnn_layers.append(self.Block(c1, c2, stride=1))
+            c1 = c2
 
         cnn_layers.append(nn.Conv2d(c1, num_classes, kernel_size=1))
         cnn_layers.append(nn.AdaptiveAvgPool2d(1))

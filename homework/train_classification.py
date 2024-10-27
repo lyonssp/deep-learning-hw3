@@ -13,13 +13,14 @@ from .utils import load_data
 def train(
     exp_dir: str = "logs",
     model_name: str = "classifier",
-    num_epoch: int = 100,
+    num_epoch: int = 50,
     lr: float = 1e-3,
     batch_size: int = 128,
     seed: int = 2024,
     **kwargs,
 ):
     if torch.cuda.is_available():
+        print("CUDA available")
         device = torch.device("cuda")
     else:
         print("CUDA not available, using CPU")
@@ -50,6 +51,10 @@ def train(
 
     # training loop
     for epoch in range(num_epoch):
+        # print on first, last, every 10th epoch
+        if epoch == 0 or epoch == num_epoch - 1 or (epoch + 1) % 10 == 0:
+            print(f"Starting epoch {epoch + 1:2d} / {num_epoch:2d}: ")
+
         # clear metrics at beginning of epoch
         for key in metrics:
             metrics[key].clear()
