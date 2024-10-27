@@ -15,12 +15,10 @@ class Classifier(nn.Module):
             kernel_size = 3
             padding = (kernel_size-1) // 2
             self.c1 = nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding)
-            self.c2 = nn.Conv2d(out_channels, out_channels, kernel_size=kernel_size, stride=1, padding=padding)
             self.relu = nn.ReLU()
 
         def forward(self, x):
             x = self.relu(self.c1(x))
-            x = self.relu(self.c2(x))
             return x
 
     def __init__(
