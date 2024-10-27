@@ -22,8 +22,8 @@ class Classifier(nn.Module):
 
         def forward(self, x):
             for conv in self.convs:
-                x = conv(x)
-            return self.relu(x)
+                x = self.relu(conv(x))
+            return x
 
     def __init__(
         self,
