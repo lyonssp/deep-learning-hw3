@@ -7,7 +7,7 @@ import torch
 import torch.utils.tensorboard as tb
 
 from .models import load_model, save_model
-from .utils import load_data
+from .datasets.classification_dataset import load_data
 
 
 def train(
@@ -39,7 +39,13 @@ def train(
     model = model.to(device)
     model.train()
 
-    train_data = load_data("classification_data/train", shuffle=True, batch_size=batch_size, num_workers=2)
+    train_data = load_data(
+        "classification_data/train",
+        shuffle=True,
+        batch_size=batch_size,
+        num_workers=2,
+        transform_pipeline="aug"
+    )
     val_data = load_data("classification_data/val", shuffle=False)
 
     # create loss function and optimizer
