@@ -28,7 +28,7 @@ class Classifier(nn.Module):
         in_channels: int = 3,
         num_classes: int = 6,
         channels_l0: int = 64,
-        n_blocks = 3,
+        n_blocks = 2,
     ):
         """
         A convolutional network for image classification.

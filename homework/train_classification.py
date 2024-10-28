@@ -1,4 +1,5 @@
 import argparse
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -55,6 +56,9 @@ def train(
     global_step = 0
     metrics = {"train_acc": [], "val_acc": []}
 
+    start = time.perf_counter()
+    total_training_time = 0
+
     # training loop
     for epoch in range(num_epoch):
         # print on first, last, every 10th epoch
@@ -103,6 +107,9 @@ def train(
                 f"train_acc={epoch_train_acc:.4f} "
                 f"val_acc={epoch_val_acc:.4f}"
             )
+        elapsed = time.perf_counter() - start
+        total_training_time += elapsed
+        print(f"Average time per epoch: {elapsed / (epoch + 1):.2f} seconds")
 
     # save and overwrite the model in the root directory for grading
     save_model(model)
