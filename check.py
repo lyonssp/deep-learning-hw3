@@ -1,4 +1,5 @@
-from homework.train_classification import train
+from homework.models import Classifier
 
 if __name__ == '__main__':
-    train()
+  model = Classifier()
+  print(model)
