@@ -80,7 +80,7 @@ def train(
             track_logits = torch.nn.functional.one_hot(track, num_classes=3).permute(0, 3, 1, 2).float()
 
             # expand the (b, h, w) depth labels to (b, 1, h, w) logits for loss calculation
-            depth_logits = depth.unsqueeze(1).float()
+            depth_logits = depth.softmax(dim=1).unsqueeze(1)
 
             print({
                 "img": img.shape, 
@@ -93,7 +93,7 @@ def train(
             })
             training_metrics.add(pred_labels, track, pred_depth, depth)
 
-            loss = .7 * ce_loss(pred, track_logits) + .3 * mse_loss(pred_depth, depth_logits)
+            loss = .5 * ce_loss(pred, track_logits) + .5 * mse_loss(pred_depth, depth_logits)
             loss.backward()
             optimizer.step()
 
@@ -117,6 +117,9 @@ def train(
         computed_validation_metrics = validation_metrics.compute()
         epoch_train_acc = torch.as_tensor(training_metrics.compute()["accuracy"])
         epoch_val_acc = torch.as_tensor(computed_validation_metrics["accuracy"])
+        epoch_iou = torch.as_tensor(computed_validation_metrics["iou"])
+        epoch_abs_depth_error = torch.as_tensor(computed_validation_metrics["abs_depth_error"])
+        epoch_tp_depth_error = torch.as_tensor(computed_validation_metrics["tp_depth_error"])
 
         logger.add_scalar("train_accuracy", epoch_train_acc, global_step)
         logger.add_scalar("val_accuracy", epoch_val_acc, global_step)
@@ -131,6 +134,10 @@ def train(
                 f"Epoch {epoch + 1:2d} / {num_epoch:2d}: "
                 f"train_acc={epoch_train_acc:.4f} "
                 f"val_acc={epoch_val_acc:.4f}"
+                f"accuracy={epoch_val_acc:.4f}"
+                f"ioc={epoch_iou:.4f}"
+                f"abs_depth_error={epoch_abs_depth_error:.4f}"
+                f"tp_depth_error={epoch_tp_depth_error:.4f}"
             )
 
     # save and overwrite the model in the root directory for grading
