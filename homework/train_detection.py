@@ -98,11 +98,15 @@ def train(
         with torch.inference_mode():
             model.eval()
 
-            for img, depth, track in val_data:
-                img, depth, track = img.to(device), depth.to(device), track.to(device)
+            for batch in train_data:
+                batch = {k: v.to(device) if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
+                img = batch["image"]
+                track = batch["track"]
+                depth = batch["depth"]
 
-                pred = model(img)
-                validation_metrics.add(pred, track, depth) 
+                pred, pred_depth = model(img)
+                pred_labels = pred.argmax(dim=1)
+                validation_metrics.add(pred_labels, track, pred_depth, depth) 
 
         # log average train and val accuracy to tensorboard
         epoch_train_acc = torch.as_tensor(training_metrics.compute()["accuracy"])
