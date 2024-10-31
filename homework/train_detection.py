@@ -51,7 +51,8 @@ def train(
     val_data = load_data("road_data/val", shuffle=False)
 
     # create loss function and optimizer
-    loss_func = torch.nn.CrossEntropyLoss()
+    ce_loss = torch.nn.CrossEntropyLoss()
+    mse_loss = torch.nn.MSELoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9)
 
     global_step = 0
@@ -78,9 +79,13 @@ def train(
             # expand the (b, h, w) track labels to (b, 3, h, w) logits for loss calculation
             track_logits = torch.nn.functional.one_hot(track, num_classes=3).permute(0, 3, 1, 2).float()
 
+            # expand the (b, h, w) depth labels to (b, 1, h, w) logits for loss calculation
+            depth_logits = depth.unsqueeze(1).float()
+
             print({
                 "img": img.shape, 
                 "depth": depth.shape, 
+                "depth_logits": depth.shape,
                 "track": track.shape, 
                 "track_logits": track_logits.shape, 
                 "predictions": pred.shape, 
@@ -88,7 +93,7 @@ def train(
             })
             training_metrics.add(pred_labels, track, pred_depth, depth)
 
-            loss = loss_func(pred, track_logits)
+            loss = .7 * ce_loss(pred, track_logits) + .3 * mse_loss(pred_depth, depth_logits)
             loss.backward()
             optimizer.step()
 
