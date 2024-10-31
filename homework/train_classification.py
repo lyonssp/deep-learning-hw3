@@ -7,19 +7,21 @@ import numpy as np
 import torch
 import torch.utils.tensorboard as tb
 
+from homework.metrics import AccuracyMetric
+
 from .models import load_model, save_model
 from .datasets.classification_dataset import load_data
 
 
 def train(
     exp_dir: str = "logs",
-    model_name: str = "classifier",
     num_epoch: int = 50,
     lr: float = 1e-3,
     batch_size: int = 128,
     seed: int = 2024,
     **kwargs,
 ):
+    model_name = "classifier"
     if torch.cuda.is_available():
         print("CUDA available")
         device = torch.device("cuda")
@@ -59,15 +61,13 @@ def train(
     start = time.perf_counter()
     total_training_time = 0
 
+    train_accuracy = AccuracyMetric()
+    val_accuracy = AccuracyMetric()
+
     # training loop
     for epoch in range(num_epoch):
-        # print on first, last, every 10th epoch
-        if epoch == 0 or epoch == num_epoch - 1 or (epoch + 1) % 10 == 0:
-            print(f"Starting epoch {epoch + 1:2d} / {num_epoch:2d}: ")
-
-        # clear metrics at beginning of epoch
-        for key in metrics:
-            metrics[key].clear()
+        train_accuracy.reset()
+        val_accuracy.reset()
 
         model.train()
 
@@ -76,7 +76,7 @@ def train(
 
             optimizer.zero_grad()
             pred = model(img)
-            metrics["train_acc"].append(pred.argmax(dim=1).eq(label).float().mean())
+            train_accuracy.add(pred, label)
             loss = loss_func(pred, label)
             loss.backward()
             optimizer.step()
@@ -91,11 +91,11 @@ def train(
                 img, label = img.to(device), label.to(device)
 
                 pred = model(img)
-                metrics["val_acc"].append(pred.argmax(dim=1).eq(label).float().mean())
+                val_accuracy.add(pred, label)
 
         # log average train and val accuracy to tensorboard
-        epoch_train_acc = torch.as_tensor(metrics["train_acc"]).mean()
-        epoch_val_acc = torch.as_tensor(metrics["val_acc"]).mean()
+        epoch_train_acc = torch.as_tensor(train_accuracy.compute()["accuracy"])
+        epoch_val_acc = torch.as_tensor(val_accuracy.compute()["accuracy"])
 
         logger.add_scalar("train_accuracy", epoch_train_acc, global_step)
         logger.add_scalar("val_accuracy", epoch_val_acc, global_step)

@@ -85,10 +85,48 @@ class Classifier(nn.Module):
         return self(x).argmax(dim=1)
 
 class Detector(torch.nn.Module):
+    class EncoderBlock(nn.Module):
+        def __init__(self, in_channels, stride):
+            super().__init__()
+            kernel_size = 3
+            padding = (kernel_size-1) // 2
+            self.c1 = nn.Conv2d(in_channels, in_channels * 2, kernel_size=kernel_size, stride=stride, padding=padding)
+            self.c2 = nn.Conv2d(in_channels * 2, in_channels * 4, kernel_size=kernel_size, stride=stride, padding=padding)
+            self.c3 = nn.ConvTranspose2d(in_channels * 4, in_channels * 2, kernel_size=kernel_size, stride=stride, padding=padding, output_padding=1)
+            self.c4 = nn.ConvTranspose2d(in_channels * 2, in_channels, kernel_size=kernel_size, stride=stride, padding=padding, output_padding=1)
+            self.relu = nn.ReLU()
+
+        def forward(self, x):
+            x = self.relu(self.c1(x))
+            x = self.relu(self.c2(x))
+            x = self.relu(self.c3(x))
+            x = self.relu(self.c4(x))
+            return x
+
+    class Encoder(nn.Module):
+        def __init__(
+            self,
+            in_channels,
+            channels_l0,
+        ):
+            super().__init__()
+
+            conv_layers = [
+                nn.Conv2d(in_channels, channels_l0, kernel_size=3, stride=1, padding=1),
+                nn.ReLU(),
+            ]
+            for i in range(2):
+                conv_layers.append(Detector.EncoderBlock(channels_l0, stride=2))
+
+            self.conv = nn.Sequential(*conv_layers)
+
+        def forward(self, x):
+            return self.conv(x)
+
     def __init__(
         self,
         in_channels: int = 3,
-        num_classes: int = 3,
+        num_classes: int = 3
     ):
         """
         A single model that performs segmentation and depth regression
@@ -102,8 +140,10 @@ class Detector(torch.nn.Module):
         self.register_buffer("input_mean", torch.as_tensor(INPUT_MEAN))
         self.register_buffer("input_std", torch.as_tensor(INPUT_STD))
 
-        # TODO: implement
-        pass
+        self.encoder = self.Encoder(in_channels, 64)
+
+        self.segmentation_head = nn.Conv2d(64, num_classes, kernel_size=1)
+        self.depth_head = nn.Conv2d(64, 1, kernel_size=1)
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """
@@ -121,11 +161,9 @@ class Detector(torch.nn.Module):
         # optional: normalizes the input
         z = (x - self.input_mean[None, :, None, None]) / self.input_std[None, :, None, None]
 
-        # TODO: replace with actual forward pass
-        logits = torch.randn(x.size(0), 3, x.size(2), x.size(3))
-        raw_depth = torch.rand(x.size(0), x.size(2), x.size(3))
+        encoded = self.encoder(z)
 
-        return logits, raw_depth
+        return self.segmentation_head(encoded), self.depth_head(encoded)
 
     def predict(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """

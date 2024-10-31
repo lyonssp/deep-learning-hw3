@@ -6,19 +6,22 @@ import numpy as np
 import torch
 import torch.utils.tensorboard as tb
 
-from .models import ClassificationLoss, load_model, save_model
-from .utils import load_data
+from homework.metrics import DetectionMetric
+
+from .models import load_model, save_model
+from .datasets.road_dataset import load_data
 
 
 def train(
     exp_dir: str = "logs",
-    model_name: str = "linear",
     num_epoch: int = 100,
     lr: float = 1e-3,
     batch_size: int = 128,
     seed: int = 2024,
     **kwargs,
 ):
+    model_name = "detector"
+
     if torch.cuda.is_available():
         device = torch.device("cuda")
     else:
@@ -38,31 +41,54 @@ def train(
     model = model.to(device)
     model.train()
 
-    train_data = load_data("classification_data/train", shuffle=True, batch_size=batch_size, num_workers=2)
-    val_data = load_data("classification_data/val", shuffle=False)
+    train_data = load_data(
+        "road_data/train",
+        shuffle=True,
+        batch_size=batch_size,
+        num_workers=2,
+        transform_pipeline="default"
+    )
+    val_data = load_data("road_data/val", shuffle=False)
 
     # create loss function and optimizer
-    loss_func = ClassificationLoss()
+    loss_func = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9)
 
     global_step = 0
-    metrics = {"train_acc": [], "val_acc": []}
+    training_metrics = DetectionMetric()
+    validation_metrics = DetectionMetric()
 
     # training loop
     for epoch in range(num_epoch):
         # clear metrics at beginning of epoch
-        for key in metrics:
-            metrics[key].clear()
+        training_metrics.reset()
 
         model.train()
 
-        for img, label in train_data:
-            img, label = img.to(device), label.to(device)
+        for batch in train_data:
+            batch = {k: v.to(device) if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
+            img = batch["image"]
+            track = batch["track"]
+            depth = batch["depth"]
 
             optimizer.zero_grad()
-            pred = model(img)
-            metrics["train_acc"].append(pred.argmax(dim=1).eq(label).float().mean())
-            loss = loss_func(pred, label)
+            pred, pred_depth = model(img)
+            pred_labels = pred.argmax(dim=1)
+
+            # expand the (b, h, w) track labels to (b, 3, h, w) logits for loss calculation
+            track_logits = torch.nn.functional.one_hot(track, num_classes=3).permute(0, 3, 1, 2).float()
+
+            print({
+                "img": img.shape, 
+                "depth": depth.shape, 
+                "track": track.shape, 
+                "track_logits": track_logits.shape, 
+                "predictions": pred.shape, 
+                "depth_predictions": pred_depth.shape
+            })
+            training_metrics.add(pred_labels, track, pred_depth, depth)
+
+            loss = loss_func(pred, track_logits)
             loss.backward()
             optimizer.step()
 
@@ -72,15 +98,15 @@ def train(
         with torch.inference_mode():
             model.eval()
 
-            for img, label in val_data:
-                img, label = img.to(device), label.to(device)
+            for img, depth, track in val_data:
+                img, depth, track = img.to(device), depth.to(device), track.to(device)
 
                 pred = model(img)
-                metrics["val_acc"].append(pred.argmax(dim=1).eq(label).float().mean())
+                validation_metrics.add(pred, track, depth) 
 
         # log average train and val accuracy to tensorboard
-        epoch_train_acc = torch.as_tensor(metrics["train_acc"]).mean()
-        epoch_val_acc = torch.as_tensor(metrics["val_acc"]).mean()
+        epoch_train_acc = torch.as_tensor(training_metrics.compute()["accuracy"])
+        epoch_val_acc = torch.as_tensor(validation_metrics.compute()["accuracy"])
 
         logger.add_scalar("train_accuracy", epoch_train_acc, global_step)
         logger.add_scalar("val_accuracy", epoch_val_acc, global_step)
