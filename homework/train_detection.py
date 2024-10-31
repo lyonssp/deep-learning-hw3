@@ -109,11 +109,16 @@ def train(
                 validation_metrics.add(pred_labels, track, pred_depth, depth) 
 
         # log average train and val accuracy to tensorboard
+        computed_validation_metrics = validation_metrics.compute()
         epoch_train_acc = torch.as_tensor(training_metrics.compute()["accuracy"])
-        epoch_val_acc = torch.as_tensor(validation_metrics.compute()["accuracy"])
+        epoch_val_acc = torch.as_tensor(computed_validation_metrics["accuracy"])
 
         logger.add_scalar("train_accuracy", epoch_train_acc, global_step)
         logger.add_scalar("val_accuracy", epoch_val_acc, global_step)
+        logger.add_scalar("accuracy", computed_validation_metrics["accuracy"], global_step)
+        logger.add_scalar("iou", computed_validation_metrics["iou"], global_step)
+        logger.add_scalar("abs_depth_error", computed_validation_metrics["abs_depth_error"])
+        logger.add_scalar("tp_depth_error", computed_validation_metrics["tp_depth_error"])
 
         # print on first, last, every 10th epoch
         if epoch == 0 or epoch == num_epoch - 1 or (epoch + 1) % 10 == 0:
