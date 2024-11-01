@@ -79,7 +79,8 @@ def train(
             # print({
             #     "img": img.shape,
             #     "label": label.shape,
-            #     "pred": pred.shape
+            #     "pred": pred.shape,
+            #     "pred_label": pred_label.shape
             # })
             train_accuracy.add(pred_label, label)
             loss = loss_func(pred, label)
@@ -97,6 +98,12 @@ def train(
 
                 pred = model(img)
                 pred_label = pred.argmax(dim=1)
+                # print({
+                #     "img": img.shape,
+                #     "label": label.shape,
+                #     "pred": pred.shape
+                #     "pred_label": pred_label.shape
+                # })
                 val_accuracy.add(pred_label, label)
 
         # log average train and val accuracy to tensorboard

@@ -27,8 +27,7 @@ class Classifier(nn.Module):
         self,
         in_channels: int = 3,
         num_classes: int = 6,
-        channels_l0: int = 64,
-        n_blocks = 2,
+        features = [32, 64, 128]
     ):
         """
         A convolutional network for image classification.
@@ -42,17 +41,13 @@ class Classifier(nn.Module):
         self.register_buffer("input_mean", torch.as_tensor(INPUT_MEAN))
         self.register_buffer("input_std", torch.as_tensor(INPUT_STD))
 
-        cnn_layers = [
-            nn.Conv2d(in_channels, channels_l0, kernel_size=3, stride=2, padding=1),
-            nn.ReLU(),
-        ]
-        c1 = channels_l0
-        for _ in range(n_blocks):
-            c2 = c1 * 2
-            cnn_layers.append(self.Block(c1, c2, stride=1))
-            c1 = c2
+        cnn_layers = []
+        for f in features:
+            cnn_layers.append(nn.Conv2d(in_channels, f, kernel_size=3, stride=2, padding=1))
+            cnn_layers.append(nn.ReLU())
+            in_channels = f
 
-        cnn_layers.append(nn.Conv2d(c1, num_classes, kernel_size=1))
+        cnn_layers.append(nn.Conv2d(f, num_classes, kernel_size=1))
         cnn_layers.append(nn.AdaptiveAvgPool2d(1))
 
         self.model = nn.Sequential(*cnn_layers)
@@ -153,10 +148,7 @@ class Detector(torch.nn.Module):
         self.decoder = nn.Sequential(*decoder_layers)
 
         self.segmentation_head = nn.Conv2d(features[0], num_classes, kernel_size=1)
-        self.depth_head = nn.Sequential(
-            nn.Conv2d(features[0], 1, kernel_size=1),
-            nn.Sigmoid(),
-        )
+        self.depth_head = nn.Conv2d(features[0], 1, kernel_size=1)
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """
@@ -177,7 +169,7 @@ class Detector(torch.nn.Module):
         encoded = self.encoder(z)
         decoded = self.decoder(encoded)
 
-        return self.segmentation_head(decoded), self.depth_head(decoded)
+        return self.segmentation_head(decoded), torch.sigmoid(self.depth_head(decoded)).squeeze(1)
 
     def predict(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """
@@ -196,7 +188,7 @@ class Detector(torch.nn.Module):
         pred = logits.argmax(dim=1)
 
         # Optional additional post-processing for depth only if needed
-        depth = raw_depth.squeeze(1)
+        depth = raw_depth
 
         return pred, depth
 
