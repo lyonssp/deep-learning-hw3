@@ -18,6 +18,8 @@ def train(
     lr: float = 1e-3,
     batch_size: int = 128,
     seed: int = 2024,
+    alpha = 1,
+    beta = 0.5,
     **kwargs,
 ):
     model_name = "detector"
@@ -93,7 +95,7 @@ def train(
             # })
             training_metrics.add(pred_labels, track, pred_depth, depth)
 
-            loss = .3 * ce_loss(pred, track_logits) + .7 * mse_loss(pred_depth, depth_logits)
+            loss = alpha * ce_loss(pred, track_logits) + beta * mse_loss(pred_depth, depth_logits)
             loss.backward()
             optimizer.step()
 
