@@ -81,8 +81,8 @@ def train(
             # expand the (b, h, w) track labels to (b, 3, h, w) logits for loss calculation
             track_logits = torch.nn.functional.one_hot(track, num_classes=3).permute(0, 3, 1, 2).float()
 
-            # expand the (b, h, w) depth labels to (b, 1, h, w) logits for loss calculation
-            depth_logits = torch.unsqueeze(1)
+            # expand the (b, h, w) depth labels to (b, 1, h, w) for loss
+            depth_scaled = torch.sigmoid(pred_depth)
 
             # print({
             #     "img": img.shape, 
@@ -95,7 +95,7 @@ def train(
             # })
             training_metrics.add(pred_labels, track, pred_depth, depth)
 
-            loss = alpha * ce_loss(pred, track_logits) + beta * mse_loss(pred_depth, depth_logits)
+            loss = alpha * ce_loss(pred, track_logits) + beta * mse_loss(pred_depth, depth_scaled)
             loss.backward()
             optimizer.step()
 
