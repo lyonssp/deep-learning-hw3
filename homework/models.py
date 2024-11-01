@@ -112,7 +112,7 @@ class Detector(torch.nn.Module):
             self.conv = nn.Sequential([
                 nn.ConvTranspose2d(in_channels, out_channels, kernel_size=3, stride=2, padding=1),
                 nn.ReLU(),
-                nn.ConvTranspose2d(out_channels, out_channels, kernel_size=3, stride=2, padding=1),
+                nn.ConvTranspose2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1),
                 nn.ReLU(),
             ])
 

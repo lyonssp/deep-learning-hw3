@@ -135,7 +135,7 @@ def train(
                 f"train_acc={epoch_train_acc:.4f} "
                 f"val_acc={epoch_val_acc:.4f} "
                 f"accuracy={epoch_val_acc:.4f} "
-                f"ioc={epoch_iou:.4f} "
+                f"iou={epoch_iou:.4f} "
                 f"abs_depth_error={epoch_abs_depth_error:.4f} "
                 f"tp_depth_error={epoch_tp_depth_error:.4f} "
             )
