@@ -82,15 +82,15 @@ def train(
             # expand the (b, h, w) depth labels to (b, 1, h, w) logits for loss calculation
             depth_logits = depth.softmax(dim=1).unsqueeze(1)
 
-            print({
-                "img": img.shape, 
-                "depth": depth.shape, 
-                "depth_logits": depth.shape,
-                "track": track.shape, 
-                "track_logits": track_logits.shape, 
-                "predictions": pred.shape, 
-                "depth_predictions": pred_depth.shape
-            })
+            # print({
+            #     "img": img.shape, 
+            #     "depth": depth.shape, 
+            #     "depth_logits": depth.shape,
+            #     "track": track.shape, 
+            #     "track_logits": track_logits.shape, 
+            #     "predictions": pred.shape, 
+            #     "depth_predictions": pred_depth.shape
+            # })
             training_metrics.add(pred_labels, track, pred_depth, depth)
 
             loss = .3 * ce_loss(pred, track_logits) + .7 * mse_loss(pred_depth, depth_logits)
