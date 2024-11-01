@@ -96,7 +96,8 @@ def train(
                 img, label = img.to(device), label.to(device)
 
                 pred = model(img)
-                val_accuracy.add(pred, label)
+                pred_label = pred.argmax(dim=1)
+                val_accuracy.add(pred_label, label)
 
         # log average train and val accuracy to tensorboard
         epoch_train_acc = torch.as_tensor(train_accuracy.compute()["accuracy"])
