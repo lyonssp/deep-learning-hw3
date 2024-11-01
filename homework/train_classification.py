@@ -56,7 +56,6 @@ def train(
     optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9)
 
     global_step = 0
-    metrics = {"train_acc": [], "val_acc": []}
 
     start = time.perf_counter()
     total_training_time = 0
@@ -76,7 +75,13 @@ def train(
 
             optimizer.zero_grad()
             pred = model(img)
-            train_accuracy.add(pred, label)
+            pred_label = pred.argmax(dim=1)
+            # print({
+            #     "img": img.shape,
+            #     "label": label.shape,
+            #     "pred": pred.shape
+            # })
+            train_accuracy.add(pred_label, label)
             loss = loss_func(pred, label)
             loss.backward()
             optimizer.step()
