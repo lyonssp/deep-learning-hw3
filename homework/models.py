@@ -153,7 +153,10 @@ class Detector(torch.nn.Module):
         self.decoder = nn.Sequential(*decoder_layers)
 
         self.segmentation_head = nn.Conv2d(features[0], num_classes, kernel_size=1)
-        self.depth_head = nn.Conv2d(features[0], 1, kernel_size=1)
+        self.depth_head = nn.Sequential(
+            nn.Conv2d(features[0], 1, kernel_size=1),
+            nn.Sigmoid(),
+        )
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """
@@ -193,7 +196,7 @@ class Detector(torch.nn.Module):
         pred = logits.argmax(dim=1)
 
         # Optional additional post-processing for depth only if needed
-        depth = raw_depth.squeeze(1)
+        depth = raw_depth
 
         return pred, depth
 
