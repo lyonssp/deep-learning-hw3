@@ -53,7 +53,7 @@ def train(
     # create loss function and optimizer
     ce_loss = torch.nn.CrossEntropyLoss()
     mse_loss = torch.nn.MSELoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     global_step = 0
     training_metrics = DetectionMetric()
@@ -93,7 +93,7 @@ def train(
             })
             training_metrics.add(pred_labels, track, pred_depth, depth)
 
-            loss = .5 * ce_loss(pred, track_logits) + .5 * mse_loss(pred_depth, depth_logits)
+            loss = .3 * ce_loss(pred, track_logits) + .7 * mse_loss(pred_depth, depth_logits)
             loss.backward()
             optimizer.step()
 
@@ -133,11 +133,11 @@ def train(
             print(
                 f"Epoch {epoch + 1:2d} / {num_epoch:2d}: "
                 f"train_acc={epoch_train_acc:.4f} "
-                f"val_acc={epoch_val_acc:.4f}"
-                f"accuracy={epoch_val_acc:.4f}"
-                f"ioc={epoch_iou:.4f}"
-                f"abs_depth_error={epoch_abs_depth_error:.4f}"
-                f"tp_depth_error={epoch_tp_depth_error:.4f}"
+                f"val_acc={epoch_val_acc:.4f} "
+                f"accuracy={epoch_val_acc:.4f} "
+                f"ioc={epoch_iou:.4f} "
+                f"abs_depth_error={epoch_abs_depth_error:.4f} "
+                f"tp_depth_error={epoch_tp_depth_error:.4f} "
             )
 
     # save and overwrite the model in the root directory for grading

@@ -86,39 +86,35 @@ class Classifier(nn.Module):
 
 class Detector(torch.nn.Module):
     class EncoderBlock(nn.Module):
-        def __init__(self, in_channels, stride):
-            super().__init__()
-            kernel_size = 3
-            padding = (kernel_size-1) // 2
-            self.c1 = nn.Conv2d(in_channels, in_channels * 2, kernel_size=kernel_size, stride=stride, padding=padding)
-            self.c2 = nn.Conv2d(in_channels * 2, in_channels * 4, kernel_size=kernel_size, stride=stride, padding=padding)
-            self.c3 = nn.ConvTranspose2d(in_channels * 4, in_channels * 2, kernel_size=kernel_size, stride=stride, padding=padding, output_padding=1)
-            self.c4 = nn.ConvTranspose2d(in_channels * 2, in_channels, kernel_size=kernel_size, stride=stride, padding=padding, output_padding=1)
-            self.relu = nn.ReLU()
-
-        def forward(self, x):
-            x = self.relu(self.c1(x))
-            x = self.relu(self.c2(x))
-            x = self.relu(self.c3(x))
-            x = self.relu(self.c4(x))
-            return x
-
-    class Encoder(nn.Module):
         def __init__(
             self,
             in_channels,
-            channels_l0,
+            out_channels,
         ):
             super().__init__()
-
-            conv_layers = [
-                nn.Conv2d(in_channels, channels_l0, kernel_size=3, stride=1, padding=1),
+            self.conv = nn.Sequential(
+                nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=2, padding=1),
                 nn.ReLU(),
-            ]
-            for i in range(2):
-                conv_layers.append(Detector.EncoderBlock(channels_l0, stride=2))
+                nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1),
+                nn.ReLU(),
+            )
 
-            self.conv = nn.Sequential(*conv_layers)
+        def forward(self, x):
+            return self.conv(x)
+
+    class DecoderBlock(nn.Module):
+        def __init__(
+            self,
+            in_channels,
+            out_channels,
+        ):
+            super().__init__()
+            self.conv = nn.Sequential([
+                nn.ConvTranspose2d(in_channels, out_channels, kernel_size=3, stride=2, padding=1),
+                nn.ReLU(),
+                nn.ConvTranspose2d(out_channels, out_channels, kernel_size=3, stride=2, padding=1),
+                nn.ReLU(),
+            ])
 
         def forward(self, x):
             return self.conv(x)
@@ -126,7 +122,8 @@ class Detector(torch.nn.Module):
     def __init__(
         self,
         in_channels: int = 3,
-        num_classes: int = 3
+        num_classes: int = 3,
+        features = [64, 128, 256, 512],
     ):
         """
         A single model that performs segmentation and depth regression
@@ -140,10 +137,23 @@ class Detector(torch.nn.Module):
         self.register_buffer("input_mean", torch.as_tensor(INPUT_MEAN))
         self.register_buffer("input_std", torch.as_tensor(INPUT_STD))
 
-        self.encoder = self.Encoder(in_channels, 64)
+        encoder_layers = [
+            nn.Conv2d(in_channels, features[0], kernel_size=3, stride=1, padding=1)
+        ]
+        decoder_layers = []
 
-        self.segmentation_head = nn.Conv2d(64, num_classes, kernel_size=1)
-        self.depth_head = nn.Conv2d(64, 1, kernel_size=1)
+        for f in features:
+            encoder_layers.append(self.EncoderBlock(f, f * 2))
+
+        for f in reversed(features):
+            decoder_layers.append(nn.ConvTranspose2d(f * 2, f, kernel_size=3, stride=2, padding=1, output_padding=1))
+            decoder_layers.append(nn.ReLU())
+
+        self.encoder = nn.Sequential(*encoder_layers)
+        self.decoder = nn.Sequential(*decoder_layers)
+
+        self.segmentation_head = nn.Conv2d(features[0], num_classes, kernel_size=1)
+        self.depth_head = nn.Conv2d(features[0], 1, kernel_size=1)
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """
@@ -162,8 +172,9 @@ class Detector(torch.nn.Module):
         z = (x - self.input_mean[None, :, None, None]) / self.input_std[None, :, None, None]
 
         encoded = self.encoder(z)
+        decoded = self.decoder(encoded)
 
-        return self.segmentation_head(encoded), self.depth_head(encoded)
+        return self.segmentation_head(decoded), self.depth_head(decoded)
 
     def predict(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """
