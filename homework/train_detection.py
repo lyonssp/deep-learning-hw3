@@ -82,7 +82,7 @@ def train(
             track_logits = torch.nn.functional.one_hot(track, num_classes=3).permute(0, 3, 1, 2).float()
 
             # expand the (b, h, w) depth labels to (b, 1, h, w) logits for loss calculation
-            depth_logits = depth.softmax(dim=1).unsqueeze(1)
+            depth_logits = torch.unsqueeze(1)
 
             # print({
             #     "img": img.shape, 
